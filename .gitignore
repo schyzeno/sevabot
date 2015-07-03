@@ -60,5 +60,4 @@ Skype4Py
 .idea
 logs/*
 *.tmp
-custom/*
 
