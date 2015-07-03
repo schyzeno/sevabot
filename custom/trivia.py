@@ -13,28 +13,22 @@ import datetime
 
 progname = 'trivia'
 
-def get_next_trivia_sequence(chat_id):
-    client = MongoClient()
-    db = client.sevabot 
-    sequence = db.counters.find_one({"collection":"trivia","chat_id":chat_id})['seq']
+def get_next_trivia_sequence(db,chat_id):
+    sequence = db.counters.find_one({"collection":"trivia","chat_id":chat_id})['sequence']
     nextSequence = sequence+1
     return nextSequence
 
-def increment_trivia_sequence(chat_id)
-    client = MongoClient()
-    db = client.sevabot 
-    sequence = db.counters.find_one({"collection":"trivia","chat_id":chat_id})['seq']
+def increment_trivia_sequence(db,chat_id):
+    sequence = db.counters.find_one({"collection":"trivia","chat_id":chat_id})['sequence']
     nextSequence = sequence+1
     result = db.counters.update(
         {"collection": "trivia","chat_id":chat_id},
-        {"$set": {"seq":(nextSequence)}}
+        {"$set": {"sequence":(nextSequence)}}
     )
     return
     
-def get_max_sequence(chat_id):
-    client = MongoClient()
-    db = client.sevabot 
-    sequence = db.counters.find_one({"collection": "trivia","chat_id":chat_id})['seq']
+def get_max_sequence(db,chat_id):
+    sequence = db.counters.find_one({"collection": "trivia","chat_id":chat_id})['sequence']
     return sequence
 
 def get_trivia(chat_id):
@@ -42,9 +36,12 @@ def get_trivia(chat_id):
     random.seed()
     client = MongoClient()
     db = client.sevabot 
-    randomInteger = random.randint(1,get_max_sequence(chat_id))
-    trivia_info = db.trivia.find_one({"chat_id": chat_id,"_id":{"$gte":randomInteger}})
-    print('>'+trivia_info['info'])
+    if(chat_sequence_exists(db,chat_id)):
+        randomInteger = random.randint(1,get_max_sequence(db,chat_id)-1)
+        trivia_info = db.trivia.find_one({"chat_id": chat_id,"trivia_id":{"$gte":randomInteger}})
+        print('>'+trivia_info['info'])
+    else:
+        print('I said nothing for a time, just ran my fingertips along the edge of the human-shaped emptiness that had been left inside me.')
     return
 
 def trivia_already_exists(db,chat_id,info):
@@ -53,28 +50,28 @@ def trivia_already_exists(db,chat_id,info):
 def chat_sequence_exists(db,chat_id):
     return db.counters.find({"collection":"trivia","chat_id": chat_id}).count()>0
 
-def insert_chat_sequence(db,chat_id)
-    db.counters.insert({"collection":"trivia","chat_id":chat_id,"sequence":1}))
+def insert_chat_sequence(db,chat_id):
+    db.counters.insert({"collection":"trivia","chat_id":chat_id,"sequence":1})
     return 1
     
 def add_trivia(chat_id,full_name,info):
     """Adds trivia to mongoDB"""
     client = MongoClient()
     db = client.sevabot 
-    if(chat_sequence_exists(chat_id)):
-        sequence = get_next_trivia_sequence(chat_id)
+    if(chat_sequence_exists(db,chat_id)):
+        sequence = get_next_trivia_sequence(db,chat_id)
     else:
-        sequence = insert_chat_sequence()
-    increment_trivia_sequence(db,chat_id)
+        sequence = insert_chat_sequence(db,chat_id)
     result = db.trivia.insert_one(
         {
-                "_id": sequence,
+                "trivia_id": sequence,
                 "info": info,
                 "chat_id": chat_id,
                 "full_name": full_name,
                 "date": datetime.datetime.utcnow()
         }
     )
+    increment_trivia_sequence(db,chat_id)
     return
 
 def main(args):
